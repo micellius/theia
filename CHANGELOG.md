@@ -1,5 +1,8 @@
 # Change Log
 
+## v0.3.17
+- [core] `ctrl+alt+a` and `ctrl+alt+d` to switch tabs left/right
+
 ## v0.3.16
 - [plug-in] added `DocumentLinkProvider` Plug-in API
 - [plug-in] Terminal.sendText API adds a new line to the text being sent to the terminal if `addNewLine` parameter wasn't specified
