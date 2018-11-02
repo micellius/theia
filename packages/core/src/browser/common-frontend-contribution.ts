@@ -25,6 +25,7 @@ import { OpenerService, open } from '../browser/opener-service';
 import { ApplicationShell } from './shell/application-shell';
 import { SHELL_TABBAR_CONTEXT_MENU } from './shell/tab-bars';
 import { AboutDialog } from './about-dialog';
+import { Widget, TabBar } from './widgets';
 import * as browser from './browser';
 import URI from '../common/uri';
 
@@ -127,6 +128,37 @@ export namespace CommonCommands {
     export const TOGGLE_BOTTOM_PANEL: Command = {
         id: 'core.toggle.bottom.panel',
         label: 'Toggle Bottom Panel'
+    };
+
+    export const FOCUS_TAB: Command = {
+        id: 'core.focus.tab',
+        label: 'Focus An Opened Tab'
+    };
+
+    export const SPLIT_TAB_RIGHT: Command = {
+        id: 'core.split.tab.right',
+        label: 'Split Right',
+    };
+    export const SPLIT_TAB_LEFT: Command = {
+        id: 'core.split.tab.left',
+        label: 'Split Left',
+    };
+    export const SPLIT_TAB_TOP: Command = {
+        id: 'core.split.tab.top',
+        label: 'Split Top',
+    };
+    export const SPLIT_TAB_BOTTOM: Command = {
+        id: 'core.split.tab.bottom',
+        label: 'Split Bottom',
+    };
+
+    export const MOVE_TO_PREVIOUS_TAB: Command = {
+        id: 'core.move.tab.previous',
+        label: 'Move Tab Before Previous'
+    };
+    export const MOVE_TO_NEXT_TAB: Command = {
+        id: 'core.move.tab.next',
+        label: 'Move Tab After Next'
     };
 
     export const SAVE: Command = {
@@ -387,6 +419,42 @@ export class CommonFrontendContribution implements MenuContribution, CommandCont
             }
         });
 
+        commandRegistry.registerCommand(CommonCommands.FOCUS_TAB, {
+            isEnabled: () => this.shell.widgets.length > 0,
+            execute: async () => {
+                const widget = await this.shell.pickWidget();
+                if (widget) {
+                    this.shell.activateWidget(widget.id);
+                }
+            }
+        });
+
+        commandRegistry.registerCommand(CommonCommands.SPLIT_TAB_RIGHT, {
+            isEnabled: () => !!this.shell.currentWidget,
+            execute: () => this.splitWidgetOut('split-right')
+        });
+        commandRegistry.registerCommand(CommonCommands.SPLIT_TAB_LEFT, {
+            isEnabled: () => !!this.shell.currentWidget,
+            execute: () => this.splitWidgetOut('split-left')
+        });
+        commandRegistry.registerCommand(CommonCommands.SPLIT_TAB_TOP, {
+            isEnabled: () => !!this.shell.currentWidget,
+            execute: () => this.splitWidgetOut('split-top')
+        });
+        commandRegistry.registerCommand(CommonCommands.SPLIT_TAB_BOTTOM, {
+            isEnabled: () => !!this.shell.currentWidget,
+            execute: () => this.splitWidgetOut('split-bottom')
+        });
+
+        commandRegistry.registerCommand(CommonCommands.MOVE_TO_PREVIOUS_TAB, {
+            isEnabled: () => !!this.shell.currentWidget,
+            execute: () => this.moveWidgetToTab(this.shell.previousTab()),
+        });
+        commandRegistry.registerCommand(CommonCommands.MOVE_TO_NEXT_TAB, {
+            isEnabled: () => !!this.shell.currentWidget,
+            execute: () => this.moveWidgetToTab(this.shell.nextTab())
+        });
+
         commandRegistry.registerCommand(CommonCommands.SAVE, {
             execute: () => this.shell.save()
         });
@@ -396,6 +464,32 @@ export class CommonFrontendContribution implements MenuContribution, CommandCont
         commandRegistry.registerCommand(CommonCommands.ABOUT_COMMAND, {
             execute: () => this.openAbout()
         });
+    }
+
+    protected moveWidgetToTab(tab: TabBar<Widget> | undefined) {
+        const { currentWidget } = this.shell;
+        if (currentWidget && tab && tab.currentTitle) {
+            const ref = tab.currentTitle.owner;
+            const area = this.shell.getAreaFor(ref);
+            if (area) {
+                this.shell.addWidget(currentWidget, { area, ref, mode: 'tab-before' });
+                this.shell.activateWidget(currentWidget.id);
+            }
+        }
+    }
+
+    protected splitWidgetOut(mode: ApplicationShell.WidgetOptions['mode']) {
+        const { currentWidget } = this.shell;
+        if (currentWidget) {
+            const currentArea = this.shell.getAreaFor(currentWidget);
+            if (currentArea) {
+                this.shell.addWidget(currentWidget, {
+                    mode,
+                    ref: currentWidget,
+                    area: currentArea,
+                });
+            }
+        }
     }
 
     registerKeybindings(registry: KeybindingRegistry): void {
@@ -476,6 +570,37 @@ export class CommonFrontendContribution implements MenuContribution, CommandCont
             {
                 command: CommonCommands.COLLAPSE_ALL_PANELS.id,
                 keybinding: 'alt+shift+c',
+            },
+            // Focus
+            {
+                command: CommonCommands.FOCUS_TAB.id,
+                keybinding: 'ctrlcmd+alt+`'
+            },
+            // Splitting
+            {
+                command: CommonCommands.SPLIT_TAB_RIGHT.id,
+                keybinding: 'ctrlcmd+alt+x d',
+            },
+            {
+                command: CommonCommands.SPLIT_TAB_LEFT.id,
+                keybinding: 'ctrlcmd+alt+x a',
+            },
+            {
+                command: CommonCommands.SPLIT_TAB_TOP.id,
+                keybinding: 'ctrlcmd+alt+x w',
+            },
+            {
+                command: CommonCommands.SPLIT_TAB_BOTTOM.id,
+                keybinding: 'ctrlcmd+alt+x s',
+            },
+            // Moving
+            {
+                command: CommonCommands.MOVE_TO_PREVIOUS_TAB.id,
+                keybinding: 'ctrlcmd+shift+alt+a',
+            },
+            {
+                command: CommonCommands.MOVE_TO_NEXT_TAB.id,
+                keybinding: 'ctrlcmd+shift+alt+d',
             },
             // Saving
             {
