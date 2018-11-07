@@ -20,31 +20,83 @@ import { RPCProtocol } from '../../api/rpc-protocol';
 import { UriComponents } from '../../common/uri-components';
 import { WebviewOptions, WebviewPanelOptions } from '@theia/plugin';
 import { ApplicationShell } from '@theia/core/lib/browser/shell/application-shell';
+import { KeybindingRegistry } from '@theia/core/lib/browser/keybinding';
 import { WebviewWidget } from './webview/webview';
+import {ThemeService} from '@theia/core/lib/browser/theming';
 
 export class WebviewsMainImpl implements WebviewsMain {
+
     private readonly proxy: WebviewsExt;
     protected readonly shell: ApplicationShell;
+    protected readonly keybindings: KeybindingRegistry;
+    protected readonly themeService: ThemeService;
 
     private readonly views = new Map<string, WebviewWidget>();
     constructor(rpc: RPCProtocol, container: interfaces.Container) {
-        this.shell = container.get(ApplicationShell);
         this.proxy = rpc.getProxy(MAIN_RPC_CONTEXT.WEBVIEWS_EXT);
+        this.shell = container.get(ApplicationShell);
+        this.keybindings = container.get(KeybindingRegistry);
+        this.themeService = container.get(ThemeService);
     }
 
-    $createWebviewPanel(viewId: string,
+    $createWebviewPanel(
+        viewId: string,
         viewType: string,
         title: string,
         showOptions: WebviewPanelShowOptions,
         options: (WebviewPanelOptions & WebviewOptions) | undefined,
-        extensionLocation: UriComponents): void {
+        extensionLocation: UriComponents
+    ): void {
+        const getThemeRules = (): string[] => {
+            const cssText: string[] = [];
+            const themeElement = <any>document.getElementById('theme');
+            if (!themeElement || !themeElement!.sheet) {
+                return cssText;
+            }
+            const sheet = themeElement!.sheet;
+            if (sheet!.disabled || !sheet!.rules || !sheet!.rules!.length) {
+                return cssText;
+            }
+
+            const nodeList = sheet!.rules;
+            for (let i = 0; i < nodeList.length; i++) {
+                if (nodeList[i] && nodeList[i].cssText) {
+                    cssText.push(nodeList[i].cssText);
+                }
+            }
+            return cssText;
+        };
         const view = new WebviewWidget(title, {
             allowScripts: options ? options.enableScripts : false
         }, {
-                onMessage: m => {
-                    this.proxy.$onMessage(viewId, m);
-                }
-            });
+            onMessage: m => {
+                this.proxy.$onMessage(viewId, m);
+            },
+            onKeyboardEvent: e => {
+                this.keybindings.run(e);
+            },
+            onLoad: contentDocument => {
+                const styleTag = contentDocument!.createElement('style');
+                styleTag.type = 'text/css';
+                contentDocument!.head.appendChild(styleTag);
+
+                getThemeRules().forEach((rule: string, index: number) => {
+                    if (!styleTag!.sheet!) {
+                        return;
+                    }
+                    styleTag!.sheet!.insertRule(rule, index);
+                });
+
+                this.themeService.onThemeChange(() => {
+                    for (let index = 0; index < styleTag!.sheet!.length; index++) {
+                        styleTag!.sheet!.deleteRule(index);
+                    }
+                    getThemeRules().forEach((rule: string, index: number) => {
+                        styleTag!.sheet!.insertRule(rule, index);
+                    });
+                });
+            }
+        });
         view.disposed.connect(() => {
             this.onCloseView(viewId);
         });
