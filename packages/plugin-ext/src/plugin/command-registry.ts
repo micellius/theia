@@ -28,15 +28,15 @@ export class CommandRegistryImpl implements CommandRegistryExt {
     private proxy: CommandRegistryMain;
     private commands = new Map<string, Handler>();
 
-    private readonly _converter: CommandsConverter;
+    private readonly converter: CommandsConverter;
 
     constructor(rpc: RPCProtocol) {
         this.proxy = rpc.getProxy(Ext.COMMAND_REGISTRY_MAIN);
-        this._converter = new CommandsConverter(this);
+        this.converter = new CommandsConverter(this);
     }
 
-    get converter(): CommandsConverter {
-        return this._converter;
+    getConverter(): CommandsConverter {
+        return this.converter;
     }
 
     registerCommand(command: theia.Command, handler?: Handler): Disposable {
@@ -97,6 +97,7 @@ export class CommandRegistryImpl implements CommandRegistryExt {
     }
 }
 
+/** Converter between internal and api commands. */
 export class CommandsConverter {
 
     private readonly delegatingCommandId: string;
@@ -119,7 +120,7 @@ export class CommandsConverter {
             title: command.label
         };
 
-        if (command.id && !this.isFalsyOrEmpty(command.arguments)) {
+        if (command.id && !CommandsConverter.isFalsyOrEmpty(command.arguments)) {
             const id = this.cacheId++;
             ObjectIdentifier.mixin(result, id);
             this.cache.set(id, command);
@@ -143,7 +144,6 @@ export class CommandsConverter {
         const id = ObjectIdentifier.of(command);
         if (typeof id === 'number') {
             return this.cache.get(id);
-
         } else {
             return {
                 id: command.id,
@@ -164,7 +164,7 @@ export class CommandsConverter {
     /**
      * @returns `false` if the provided object is an array and not empty.
      */
-    private isFalsyOrEmpty(obj: any): boolean {
+    private static isFalsyOrEmpty(obj: any): boolean {
         return !Array.isArray(obj) || (<Array<any>>obj).length === 0;
     }
 }

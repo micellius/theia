@@ -82,7 +82,7 @@ export class LanguagesExtImpl implements LanguagesExt {
     private callId = 0;
     private adaptersMap = new Map<number, Adapter>();
 
-    constructor(rpc: RPCProtocol, private readonly documents: DocumentsExtImpl, private commands: CommandRegistryImpl) {
+    constructor(rpc: RPCProtocol, private readonly documents: DocumentsExtImpl, private readonly commands: CommandRegistryImpl) {
         this.proxy = rpc.getProxy(PLUGIN_RPC_CONTEXT.LANGUAGES_MAIN);
         this.diagnostics = new Diagnostics(rpc);
     }
@@ -322,26 +322,26 @@ export class LanguagesExtImpl implements LanguagesExt {
 
     // ### Code Lens Provider begin
     registerCodeLensProvider(selector: theia.DocumentSelector, provider: theia.CodeLensProvider): theia.Disposable {
-        const callId = this.addNewAdapter(new CodeLensAdapter(provider, this.documents, this.commands.converter));
+        const callId = this.addNewAdapter(new CodeLensAdapter(provider, this.documents, this.commands.getConverter()));
         const eventHandle = typeof provider.onDidChangeCodeLenses === 'function' ? this.nextCallId() : undefined;
         this.proxy.$registerCodeLensSupport(callId, this.transformDocumentSelector(selector), eventHandle);
         let result = this.createDisposable(callId);
 
         if (eventHandle !== undefined && provider.onDidChangeCodeLenses) {
-			const subscription = provider.onDidChangeCodeLenses(_ => this.proxy.$emitCodeLensEvent(eventHandle));
-			result = Disposable.from(result, subscription);
-		}
+            const subscription = provider.onDidChangeCodeLenses(e => this.proxy.$emitCodeLensEvent(eventHandle));
+            result = Disposable.from(result, subscription);
+        }
 
         return result;
     }
 
-	$provideCodeLenses(handle: number, resource: UriComponents): Promise<CodeLensSymbol[] | undefined> {
-		return this.withAdapter(handle, CodeLensAdapter, adapter => adapter.provideCodeLenses(URI.revive(resource)));
-	}
+    $provideCodeLenses(handle: number, resource: UriComponents): Promise<CodeLensSymbol[] | undefined> {
+        return this.withAdapter(handle, CodeLensAdapter, adapter => adapter.provideCodeLenses(URI.revive(resource)));
+    }
 
-	$resolveCodeLens(handle: number, resource: UriComponents, symbol: CodeLensSymbol): Promise<CodeLensSymbol | undefined> {
-		return this.withAdapter(handle, CodeLensAdapter, adapter => adapter.resolveCodeLens(URI.revive(resource), symbol));
-	}
+    $resolveCodeLens(handle: number, resource: UriComponents, symbol: CodeLensSymbol): Promise<CodeLensSymbol | undefined> {
+        return this.withAdapter(handle, CodeLensAdapter, adapter => adapter.resolveCodeLens(URI.revive(resource), symbol));
+    }
     // ### Code Lens Provider end
 
     // ### Code Reference Provider begin

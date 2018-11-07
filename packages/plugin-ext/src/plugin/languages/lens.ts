@@ -23,9 +23,10 @@ import { ObjectIdentifier } from '../../common/object-identifier';
 import { createToken } from '../token-provider';
 import { CommandsConverter } from '../command-registry';
 
+/** Adapts the calls from main to extension thread for providing/resolving the code lenses. */
 export class CodeLensAdapter {
 
-	private static _badCmd: theia.Command = { id: 'missing', label: '<<MISSING COMMAND>>' };
+	private static readonly BAD_CMD: theia.Command = { id: 'missing', label: '<<MISSING COMMAND>>' };
 
 	private cacheId = 0;
 	private cache = new Map<number, theia.CodeLens>();
@@ -75,7 +76,7 @@ export class CodeLensAdapter {
 
 		return resolve.then(newLens => {
 			newLens = newLens || lens;
-			symbol.command = this.commands.toInternal(newLens.command || CodeLensAdapter._badCmd);
+			symbol.command = this.commands.toInternal(newLens.command || CodeLensAdapter.BAD_CMD);
 			return symbol;
 		});
 	}
