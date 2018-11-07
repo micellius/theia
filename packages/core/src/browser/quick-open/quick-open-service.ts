@@ -36,7 +36,15 @@ export namespace QuickOpenOptions {
          */
         readonly showItemsWithoutHighlight: boolean;
 
-        selectIndex(lookfor: string): number;
+        /**
+         * `true` if underlying HTML input element should use the `<input type="password">` and provide a way for the user to securely enter a password.
+         * Otherwise, `false`.
+         *
+         * For more details visit: https://developer.mozilla.org/en-US/docs/Web/HTML/Element/input/password.
+         */
+        readonly password: boolean;
+
+        selectIndex(lookFor: string): number;
 
         onClose(canceled: boolean): void;
     }
@@ -55,7 +63,8 @@ export namespace QuickOpenOptions {
 
         onClose: () => { /* no-op*/ },
 
-        selectIndex: () => -1
+        selectIndex: () => -1,
+        password: false
     });
     export function resolve(options: QuickOpenOptions = {}, source: Resolved = defaultOptions): Resolved {
         return Object.assign({}, source, options);
